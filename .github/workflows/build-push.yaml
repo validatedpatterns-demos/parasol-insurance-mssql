@@ -49,11 +49,18 @@ jobs:
 
       # OpenShift nodes are x86_64; always build amd64 regardless of runner arch.
       - name: Build image
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
         run: |
+          IFS=',' read -r -a TAG_ARRAY <<< "${TAGS}"
+          TAG_FLAGS=()
+          for tag in "${TAG_ARRAY[@]}"; do
+            TAG_FLAGS+=(-t "${tag}")
+          done
           podman build \
             --platform linux/amd64 \
             -f Containerfile \
-            $(echo "${{ steps.tags.outputs.tags }}" | sed 's/[^,]*/-t &/g') \
+            "${TAG_FLAGS[@]}" \
             .
 
       - name: Push image
