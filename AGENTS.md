@@ -4,6 +4,24 @@ Parasol Insurance demo: a Quarkus 3.17.5 (Java 17) REST application backed by
 **SQL Server 2022**, deployed to a **Red Hat OpenShift** cluster (namespace
 `nvinto-dev`) via the Helm chart in `helm/parasol/`.
 
+## CI / image publishing
+
+`.github/workflows/build-push.yaml` builds the Maven app and the container
+image on every push to `main` (plus `v*` tags), then pushes to
+**quay.io/validatedpatterns/parasol-mssql** with tags `latest`,
+`<short-sha>` and (for tags) the tag name. Requires repo secrets
+`QUAY_USERNAME` / `QUAY_PASSWORD` (a quay.io robot account). Always built with
+`--platform linux/amd64` — see the podman note below. Deploying a fresh
+`latest` to the cluster still needs `oc rollout restart deployment/parasol-app
+-n nvinto-dev` afterwards (`helm upgrade` alone won't re-pull).
+
+The OpenShift Helm chart in this repo is one deployment target; the
+**collection** target lives in the same org:
+`github.com/validatedpatterns-demos/rhvp.parasol_mssql_demo` (Ansible roles
+`mssql_win` deploys SQL Server 2022 on Windows Server via Chocolatey, and
+`quadlet_app` runs this image as a podman quadlet/systemd service on RHEL VMs).
+CI runs on the org fork `validatedpatterns-demos/parasol-insurance-mssql`.
+
 ## Project layout
 
 ```

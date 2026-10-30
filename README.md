@@ -1,4 +1,22 @@
-!By default the app will assume there is a chat model on https://localhost:8000/v1 that exposes an OpenAI endpoint!
+# Parasol Insurance demo
+
+![By default the app will assume there is a chat model on https://localhost:8000/v1 that exposes an OpenAI endpoint!](https://img.shields.io/badge/LLM-OpenAI--endpoint%20on%20localhost-blue)
+
+## Image build & publish (GitHub Actions)
+
+`.github/workflows/build-push.yaml` builds the app and the container image and
+pushes to **quay.io/validatedpatterns/parasol-mssql** on every push to
+`main` (`latest` + short-SHA tags) and on `v*` tags (tag name added). It
+requires repository secrets `QUAY_USERNAME` and `QUAY_PASSWORD`. The build
+always uses `--platform linux/amd64` since the target OpenShift nodes are
+x86_64.
+
+To deploy the app on bare VMs instead of OpenShift, use the Ansible collection
+`rhvp.parasol_mssql_demo` from the
+[validatedpatterns-demos](https://github.com/validatedpatterns-demos) org — it
+runs this image as a podman quadlet on RHEL and deploys SQL Server 2022 on
+Windows Server via Chocolatey.
+
 
 # Using Ollama
 

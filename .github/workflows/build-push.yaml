@@ -1,0 +1,64 @@
+name: build-push
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  IMAGE_REGISTRY: quay.io
+  IMAGE_REPOSITORY: validatedpatterns/parasol-mssql
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build application
+        run: ./mvnw package -DskipTests
+
+      - name: Determine tags
+        id: tags
+        run: |
+          SHORT_SHA="$(git rev-parse --short=7 "${GITHUB_SHA}")"
+          IMAGE="${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+          TAGS="${IMAGE}:latest,${IMAGE}:${SHORT_SHA}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAGS="${TAGS},${IMAGE}:${GITHUB_REF_NAME}"
+          fi
+          echo "tags=${TAGS}" | tee -a "${GITHUB_OUTPUT}"
+
+      - name: Log in to quay.io
+        run: |
+          podman login \
+            --username "${{ secrets.QUAY_USERNAME }}" \
+            --password "${{ secrets.QUAY_PASSWORD }}" \
+            quay.io
+
+      # OpenShift nodes are x86_64; always build amd64 regardless of runner arch.
+      - name: Build image
+        run: |
+          podman build \
+            --platform linux/amd64 \
+            -f Containerfile \
+            $(echo "${{ steps.tags.outputs.tags }}" | sed 's/[^,]*/-t &/g') \
+            .
+
+      - name: Push image
+        run: |
+          IFS=',' read -r -a TAG_ARRAY <<< "${{ steps.tags.outputs.tags }}"
+          for tag in "${TAG_ARRAY[@]}"; do
+            podman push "${tag}"
+          done
